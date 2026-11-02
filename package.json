@@ -1,0 +1,51 @@
+{
+  "name": "chaoxing-openai-proxy",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "OpenAI-compatible API and sandboxed tool-calling agent for the Chaoxing AI librarian, with a transparent reverse proxy",
+  "keywords": [
+    "openai-api",
+    "openai-compatible",
+    "llm-proxy",
+    "tool-calling",
+    "function-calling",
+    "agent",
+    "code-agent",
+    "reverse-proxy",
+    "chaoxing"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Zelda896/chaoxing-openai-proxy.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Zelda896/chaoxing-openai-proxy/issues"
+  },
+  "homepage": "https://github.com/Zelda896/chaoxing-openai-proxy#readme",
+  "scripts": {
+    "start": "node src/server.mjs",
+    "test": "npm run test:prompt && npm run test:smoke && npm run test:sandbox && npm run test:agent",
+    "test:prompt": "node test/prompt-test.mjs",
+    "test:openai": "node test/openai-compat-test.mjs",
+    "test:sandbox": "node test/sandbox-test.mjs",
+    "test:finish": "node test/finish-shapes-test.mjs",
+    "test:agent": "node test/agent-test.mjs",
+    "test:agent:openai": "node test/agent-openai-test.mjs",
+    "test:smoke": "node test/smoke.mjs"
+  },
+  "engines": {
+    "node": ">=20.11"
+  },
+  "files": [
+    "src",
+    "public",
+    "README.md",
+    "LICENSE",
+    "DISCLAIMER.md"
+  ],
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

@@ -1,0 +1,31 @@
+services:
+  chaoxing-openai-proxy:
+    build: .
+    image: chaoxing-openai-proxy:latest
+    container_name: chaoxing-openai-proxy
+    restart: unless-stopped
+    ports:
+      - "8686:8686"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8686
+      # Required once this container is reachable beyond localhost.
+      API_KEYS: ${API_KEYS:?set API_KEYS in .env before starting}
+      MODEL_NAME: ${MODEL_NAME:-chaoxing-ai-librarian}
+      MODEL_ALIASES: ${MODEL_ALIASES:-}
+      UNIT_ID: ${UNIT_ID:-21354}
+      ROBOT_ID: ${ROBOT_ID:-dfda0d9629b34e0fa59a9b57834b8c56}
+      AGENT_ROOT: /data/agent-sandbox
+      AGENT_ALLOW_EXEC: ${AGENT_ALLOW_EXEC:-0}
+      AGENT_MAX_STEPS: ${AGENT_MAX_STEPS:-6}
+    volumes:
+      - agent-workspace:/data/agent-sandbox
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8686/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+volumes:
+  agent-workspace:

@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Local environment / secrets
+.env
+.env.*
+!.env.example
+
+# Runtime output
+*.log
+logs/
+npm-debug.log*
+.cache/
+.npmcache/
+
+# Scratch space used by the local agent tools
+agent-sandbox/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Test artifacts
+coverage/
+test-results/

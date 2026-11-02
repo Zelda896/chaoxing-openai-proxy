@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>AI 馆员 · 反代</title>
+    <style>
+      :root {
+        --bg: #f4f7fb;
+        --card: #ffffff;
+        --ink: #16202c;
+        --muted: #6b7c93;
+        --brand: #1f6feb;
+        --brand-soft: #e8f0fe;
+        --line: #e2e8f0;
+        --ok: #12805c;
+        --warn: #b45309;
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; }
+      body {
+        background: var(--bg);
+        color: var(--ink);
+        font: 15px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+        display: flex;
+        justify-content: center;
+      }
+      .app {
+        width: 100%;
+        max-width: 900px;
+        height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        background: var(--card);
+        box-shadow: 0 0 0 1px var(--line);
+      }
+      header {
+        padding: 14px 18px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .avatar {
+        width: 36px; height: 36px; border-radius: 50%;
+        background: linear-gradient(135deg, #4f8cff, #1f6feb);
+        color: #fff; display: grid; place-items: center; font-weight: 600;
+      }
+      .title { font-weight: 600; }
+      .sub { color: var(--muted); font-size: 12px; }
+      .status { margin-left: auto; font-size: 12px; color: var(--muted); }
+      .toggle { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--muted); user-select: none; cursor: pointer; }
+      .toggle input { display: none; }
+      .toggle .track {
+        width: 36px; height: 20px; border-radius: 999px; background: #cbd5e1; position: relative; transition: background .15s;
+      }
+      .toggle .track::after {
+        content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
+        background: #fff; transition: transform .15s;
+      }
+      .toggle input:checked + .track { background: var(--brand); }
+      .toggle input:checked + .track::after { transform: translateX(16px); }
+      main {
+        flex: 1; overflow-y: auto; padding: 20px 18px; display: flex; flex-direction: column; gap: 14px;
+        scroll-behavior: smooth;
+      }
+      .msg { max-width: 88%; padding: 11px 14px; border-radius: 14px; white-space: pre-wrap; word-break: break-word; }
+      .msg.user { align-self: flex-end; background: var(--brand); color: #fff; border-bottom-right-radius: 4px; }
+      .msg.bot { align-self: flex-start; background: var(--brand-soft); border-bottom-left-radius: 4px; }
+      .msg.bot.pending .body::after { content: "▍"; animation: blink 1s steps(2) infinite; }
+      .tools { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+      .tools:empty { display: none; }
+      .tool {
+        font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+        background: #fff; border: 1px solid #d7e3f5; border-radius: 8px; padding: 6px 9px;
+        color: #243b53; overflow-wrap: anywhere;
+      }
+      .tool .name { color: var(--brand); font-weight: 600; }
+      .tool .ok { color: var(--ok); }
+      .tool .fail { color: #b91c1c; }
+      .tool .arg { color: var(--muted); }
+      .tool pre {
+        margin: 6px 0 0; padding: 8px; border-radius: 6px; background: #f6f8fb; overflow-x: auto;
+        font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; color: #1f2d3d; white-space: pre-wrap;
+      }
+      .meta { font-size: 11px; color: var(--muted); margin-top: 6px; }
+      .link { color: var(--brand); }
+      footer { border-top: 1px solid var(--line); padding: 12px 14px; display: flex; gap: 10px; align-items: flex-end; }
+      textarea {
+        flex: 1; resize: none; min-height: 44px; max-height: 140px; padding: 11px 13px; border-radius: 12px;
+        border: 1px solid var(--line); font: inherit; outline: none; background: #fbfcfe;
+      }
+      textarea:focus { border-color: var(--brand); background: #fff; }
+      button {
+        height: 44px; padding: 0 18px; border: 0; border-radius: 12px; background: var(--brand); color: #fff;
+        font: inherit; font-weight: 600; cursor: pointer;
+      }
+      button:disabled { opacity: 0.55; cursor: not-allowed; }
+      .hint { font-size: 12px; color: var(--muted); padding: 0 18px 10px; }
+      @keyframes blink { 50% { opacity: 0; } }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header>
+        <div class="avatar">AI</div>
+        <div>
+          <div class="title">AI 馆员</div>
+          <div class="sub">robot.chaoxing.com · 本地反代</div>
+        </div>
+        <label class="toggle" title="开启后模型可以调用本地工具（读文件、抓网页、执行命令…），最多 6 轮">
+          <input type="checkbox" id="agent" />
+          <span class="track"></span>
+          <span>Agent</span>
+        </label>
+        <div class="status" id="status">就绪</div>
+      </header>
+      <main id="log"></main>
+      <div class="hint">Enter 发送 · Shift+Enter 换行 · Agent 模式下会真实调用本地工具</div>
+      <footer>
+        <textarea id="input" rows="1" placeholder="询问图书馆资源、借阅、校园服务…"></textarea>
+        <button id="send">发送</button>
+      </footer>
+    </div>
+    <script>
+      const log = document.getElementById('log');
+      const input = document.getElementById('input');
+      const send = document.getElementById('send');
+      const statusEl = document.getElementById('status');
+      const agentEl = document.getElementById('agent');
+      let busy = false;
+
+      function bubble(role, text) {
+        const el = document.createElement('div');
+        el.className = `msg ${role}`;
+        const tools = document.createElement('div');
+        tools.className = 'tools';
+        const body = document.createElement('div');
+        body.className = 'body';
+        body.textContent = text;
+        el.append(tools, body);
+        log.appendChild(el);
+        log.scrollTop = log.scrollHeight;
+        return { el, tools, body };
+      }
+
+      function toolLine(tools, html) {
+        const row = document.createElement('div');
+        row.className = 'tool';
+        row.innerHTML = html;
+        tools.appendChild(row);
+        log.scrollTop = log.scrollHeight;
+      }
+
+      async function ask(message, useAgent) {
+        bubble('user', message);
+        const bot = bubble('bot pending', '');
+        let text = '';
+        let lastStatus = '';
+        busy = true;
+        send.disabled = true;
+        statusEl.textContent = useAgent ? 'Agent 规划中…' : '思考中…';
+        const url = useAgent ? '/v1/agent/chat' : '/api/chat';
+        const payload = useAgent ? { message, maxRounds: 6 } : { message };
+
+        try {
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const blocks = buffer.split('\n\n');
+            buffer = blocks.pop() ?? '';
+            for (const block of blocks) {
+              const type = /^event: (.*)$/m.exec(block)?.[1];
+              const dataLine = /^data: (.*)$/m.exec(block)?.[1];
+              if (!type || !dataLine) continue;
+              const data = JSON.parse(dataLine);
+              if (type === 'status') {
+                lastStatus = data.text;
+                statusEl.textContent = data.text;
+              } else if (type === 'step') {
+                statusEl.textContent = `第 ${data.index}/${data.total} 步`;
+              } else if (type === 'action') {
+                toolLine(bot.tools, `<span class="name">action ${data.step}</span><pre class="code">${escapeHtml(data.code)}</pre>`);
+                statusEl.textContent = '沙箱执行中…';
+              } else if (type === 'observation') {
+                const summary = data.error
+                  ? `<span class="fail">${escapeHtml(data.error)}</span>`
+                  : `<span class="ok">ok</span> <span class="arg">${data.toolCalls} 次工具调用</span>`;
+                toolLine(bot.tools, `<span class="name">observation ${data.step}</span> → ${summary}<pre class="out">${escapeHtml((data.output || '(无输出)').slice(0, 1200))}</pre>`);
+              } else if (type === 'delta') {
+                text += data.text;
+                bot.body.textContent = text;
+                log.scrollTop = log.scrollHeight;
+              } else if (type === 'link') {
+                const a = document.createElement('a');
+                a.href = data.url;
+                a.target = '_blank';
+                a.rel = 'noreferrer';
+                a.className = 'link';
+                a.textContent = `\n[${data.title}] ${data.url}`;
+                bot.body.appendChild(a);
+              } else if (type === 'done') {
+                statusEl.textContent = `${data.finishReason} · ${(data.elapsedMs / 1000).toFixed(1)}s${data.round ? ` · ${data.round} 轮` : ''}`;
+                if (!text) {
+                  text = lastStatus ? `（未获得回答：${lastStatus}）` : '（本次未获得回答，请重试）';
+                  bot.body.textContent = text;
+                }
+                const meta = document.createElement('div');
+                meta.className = 'meta';
+                meta.textContent = data.conversationId ? `conversation ${data.conversationId}` : '';
+                if (meta.textContent) bot.el.appendChild(meta);
+              } else if (type === 'error') {
+                bot.body.textContent = `请求失败：${data.message}`;
+                statusEl.textContent = '错误';
+              }
+            }
+          }
+        } catch (error) {
+          bot.body.textContent = `请求失败：${error.message}`;
+          statusEl.textContent = '错误';
+        } finally {
+          bot.el.classList.remove('pending');
+          busy = false;
+          send.disabled = false;
+        }
+      }
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
+      }
+
+      send.addEventListener('click', () => {
+        const value = input.value.trim();
+        if (!value || busy) return;
+        input.value = '';
+        input.style.height = 'auto';
+        ask(value, agentEl.checked);
+      });
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' && !event.shiftKey) {
+          event.preventDefault();
+          send.click();
+        }
+      });
+      input.addEventListener('input', () => {
+        input.style.height = 'auto';
+        input.style.height = `${Math.min(input.scrollHeight, 140)}px`;
+      });
+    </script>
+  </body>
+</html>
